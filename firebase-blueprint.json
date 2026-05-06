@@ -1,0 +1,31 @@
+{
+  "entities": {
+    "Vote": {
+      "title": "Vote",
+      "description": "A single vote from a user for a specific team.",
+      "type": "object",
+      "properties": {
+        "teamId": {
+          "type": "string",
+          "description": "The ID of the team voted for (madrid, city, bayern, arsenal)."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who voted."
+        },
+        "votedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the vote."
+        }
+      },
+      "required": ["teamId", "userId", "votedAt"]
+    }
+  },
+  "firestore": {
+    "/votes/{userId}": {
+      "schema": "Vote",
+      "description": "Votes collection indexed by userId to ensure one vote per person."
+    }
+  }
+}
