@@ -28,6 +28,7 @@ export default function App() {
   const [userVote, setUserVote] = useState<TeamId | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<TeamId | null>(null);
   const [votingInProgress, setVotingInProgress] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [globalCounts, setGlobalCounts] = useState<Record<TeamId, number>>({
     madrid: 0,
     city: 0,
@@ -90,13 +91,24 @@ export default function App() {
     if (!selectedTeam || hasVoted || votingInProgress) return;
 
     setVotingInProgress(true);
+    setError(null);
     
     try {
-      let currentUser = user;
+      let currentUser = auth.currentUser || user;
       if (!currentUser) {
-        const cred = await signInAnon();
-        currentUser = cred.user;
+        try {
+          const cred = await signInAnon();
+          currentUser = cred.user;
+        } catch (authError: any) {
+          console.error("Auth error:", authError);
+          if (authError.message?.includes('admin-restricted-operation') || authError.code === 'auth/admin-restricted-operation') {
+             throw new Error("CRITICAL: Anonymous Auth is DISABLED. Please go to Firebase Console > Authentication > Sign-in method and ENABLE 'Anonymous' to allow voting.");
+          }
+          throw new Error("Authentication failed. Please try again.");
+        }
       }
+
+      if (!currentUser) throw new Error("User authentication failed.");
 
       const voteData: Vote = {
         teamId: selectedTeam,
@@ -107,8 +119,15 @@ export default function App() {
       await setDoc(doc(db, 'votes', currentUser.uid), voteData);
       setHasVoted(true);
       setUserVote(selectedTeam);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `votes/${user?.uid || 'pending'}`);
+    } catch (e: any) {
+      console.error("Vote failed:", e);
+      let message = "Submission failed. Please try again.";
+      if (e.message && e.message.includes("permissions")) {
+        message = "Permission denied. Please try refreshing.";
+      } else if (e.message) {
+        message = e.message;
+      }
+      setError(message);
     } finally {
       setVotingInProgress(false);
     }
@@ -156,12 +175,25 @@ export default function App() {
         <div className="relative rounded-[40px] overflow-hidden mb-20 p-12 lg:p-24 border border-white/10 group shadow-3xl">
           <div className="absolute inset-0 z-0">
             <img 
-              src="https://upload.wikimedia.org/wikipedia/commons/b/b3/Kylian_Mbapp%C3%A9_France_Russia_2018.jpg" 
-              alt="Kylian Mbappé" 
-              className="w-full h-full object-cover opacity-50 scale-105 group-hover:scale-100 transition-transform duration-10000"
+              src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=2000&auto=format&fit=crop" 
+              alt="Stadium" 
+              className="w-full h-full object-cover opacity-40 scale-105"
               referrerPolicy="no-referrer"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
+            
+            {/* Mbappé Side Portrait Overlay */}
+            <div className="absolute right-0 bottom-0 top-0 w-full lg:w-1/2 overflow-hidden pointer-events-none opacity-40 lg:opacity-100">
+              <motion.img 
+                initial={{ opacity: 0, x: 100 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
+                src="https://upload.wikimedia.org/wikipedia/commons/b/b3/Kylian_Mbapp%C3%A9_France_Russia_2018.jpg" 
+                alt="Kylian Mbappé Portrait" 
+                className="h-full w-full object-contain object-right-bottom mix-blend-screen grayscale-0 contrast-125"
+                referrerPolicy="no-referrer"
+              />
+            </div>
           </div>
 
           <div className="relative z-10 flex flex-col lg:flex-row items-center gap-12">
@@ -256,6 +288,16 @@ export default function App() {
                     )}
                   </button>
                   
+                  {error && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-bold uppercase text-center"
+                    >
+                      {error}
+                    </motion.div>
+                  )}
+                  
                   <div className="flex items-start gap-3 p-4 bg-zinc-900/50 rounded-xl border border-zinc-800">
                     <Info size={16} className="text-indigo-400 mt-0.5 flex-shrink-0" />
                     <p className="text-xs text-zinc-500 leading-relaxed uppercase tracking-wider">
@@ -278,7 +320,7 @@ export default function App() {
           <div className="flex justify-center gap-6 opacity-30 grayscale hover:grayscale-0 transition-all cursor-default">
              <Trophy size={18} />
              <div className="w-px h-5 bg-zinc-800 self-center" />
-             <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Madrid • City • Bayern • Arsenal</span>
+             <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Madrid • City • Bayern • Arsenal • Barca</span>
           </div>
         </div>
       </footer>
