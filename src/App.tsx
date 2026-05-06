@@ -188,9 +188,9 @@ export default function App() {
                 initial={{ opacity: 0, x: 100 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 1.2, ease: "easeOut" }}
-                src="https://upload.wikimedia.org/wikipedia/commons/b/b3/Kylian_Mbapp%C3%A9_France_Russia_2018.jpg" 
+                src="https://www.pngarts.com/files/10/Kylian-Mbappe-PNG-Photo.png" 
                 alt="Kylian Mbappé Portrait" 
-                className="h-full w-full object-contain object-right-bottom mix-blend-screen grayscale-0 contrast-125"
+                className="h-full w-full object-contain object-right-bottom scale-110 grayscale-0 contrast-100"
                 referrerPolicy="no-referrer"
               />
             </div>
